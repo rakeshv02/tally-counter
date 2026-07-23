@@ -15,166 +15,277 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh}
 nav{background:#1e293b;border-bottom:1px solid #334155;padding:14px 24px;display:flex;align-items:center;gap:16px}
-nav a{color:#94a3b8;text-decoration:none;font-size:14px}nav a:hover{color:#f1f5f9}
+nav a{color:#94a3b8;text-decoration:none;font-size:14px}
+nav a:hover{color:#f1f5f9}
 nav .brand{color:#38bdf8;font-weight:700;font-size:18px}
 .ad-banner{background:#1e293b;border-bottom:1px solid #334155;padding:8px;text-align:center}
-@keyframes bump{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
-.bumping{animation:bump 0.15s ease-out}
 </style>
 </head>
 <body>
-<nav><span class="brand">⚡ Tabutility</span><a href="https://tabutility.com">← All Tools</a></nav>
-<div class="ad-banner"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-7039091592734005" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle=window.adsbygoogle||[]).push({});</script></div>
+<nav>
+  <span class="brand">⚡ Tabutility</span>
+  <a href="https://tabutility.com">← All Tools</a>
+</nav>
+<div class="ad-banner">
+  <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-7039091592734005" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+</div>
 <div id="root"></div>
 <script type="text/babel">
 //<![CDATA[
-const { useState, useRef, useCallback } = React;
+const { useState } = React;
 
 const COLORS = ['#38bdf8','#22c55e','#f59e0b','#ef4444','#a855f7','#ec4899','#14b8a6','#f97316'];
 
-let nextId = 1;
-function makeCounter(name = 'Counter', color = COLORS[0]) {
-  return { id: nextId++, name, count: 0, step: 1, target: null, color };
+var idSeq = 1;
+function newId() { return idSeq++; }
+
+function makeCounter(name, color) {
+  return { id: newId(), name: name, count: 0, step: 1, target: 0, color: color };
 }
 
-function Counter({ c, onChange, onRemove }) {
-  const [bumping, setBumping] = useState(false);
-  const [editName, setEditName] = useState(false);
-  const [nameVal, setNameVal] = useState(c.name);
-  const [showSettings, setShowSettings] = useState(false);
-  const numRef = useRef(null);
+function Counter(props) {
+  var c = props.c;
+  var onChange = props.onChange;
+  var onRemove = props.onRemove;
 
-  const increment = () => {
-    onChange({ ...c, count: c.count + c.step });
+  var editState = useState(false);
+  var editing = editState[0];
+  var setEditing = editState[1];
+
+  var nameState = useState(c.name);
+  var nameVal = nameState[0];
+  var setNameVal = nameState[1];
+
+  var settingsState = useState(false);
+  var showSettings = settingsState[0];
+  var setShowSettings = settingsState[1];
+
+  var bumpState = useState(false);
+  var bumping = bumpState[0];
+  var setBumping = bumpState[1];
+
+  function increment() {
+    onChange(Object.assign({}, c, { count: c.count + c.step }));
     setBumping(true);
-    if (numRef.current) {
-      numRef.current.classList.remove('bumping');
-      void numRef.current.offsetWidth;
-      numRef.current.classList.add('bumping');
-    }
-    setTimeout(() => setBumping(false), 200);
-  };
+    setTimeout(function() { setBumping(false); }, 120);
+  }
 
-  const pct = c.target ? Math.min(100, Math.round((c.count / c.target) * 100)) : null;
-  const reached = c.target && c.count >= c.target;
+  function decrement() {
+    onChange(Object.assign({}, c, { count: Math.max(0, c.count - c.step) }));
+  }
+
+  function resetCount() {
+    onChange(Object.assign({}, c, { count: 0 }));
+  }
+
+  function saveName() {
+    onChange(Object.assign({}, c, { name: nameVal }));
+    setEditing(false);
+  }
+
+  var pct = c.target > 0 ? Math.min(100, Math.round((c.count / c.target) * 100)) : null;
+  var reached = c.target > 0 && c.count >= c.target;
 
   return (
-    <div style={{background:'#1e293b',borderRadius:20,padding:20,border:`2px solid ${reached?'#22c55e':c.color+'44'}`,position:'relative'}}>
-      {/* Header */}
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        {editName
-          ? <input value={nameVal} onChange={e=>setNameVal(e.target.value)} onBlur={()=>{onChange({...c,name:nameVal});setEditName(false);}} onKeyDown={e=>e.key==='Enter'&&(onChange({...c,name:nameVal}),setEditName(false))} autoFocus style={{background:'#0f172a',color:'#f1f5f9',border:'1px solid #334155',borderRadius:8,padding:'4px 10px',fontSize:15,fontWeight:600,flex:1,marginRight:8}}/>
-          : <h2 onClick={()=>setEditName(true)} style={{fontSize:16,fontWeight:600,cursor:'pointer',color:'#f1f5f9'}} title="Click to rename">{c.name} ✏️</h2>
+    React.createElement('div', {
+      style: {
+        background: '#1e293b',
+        borderRadius: 20,
+        padding: 20,
+        border: '2px solid ' + (reached ? '#22c55e' : c.color + '66')
+      }
+    },
+      // Header
+      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 } },
+        editing
+          ? React.createElement('input', {
+              value: nameVal,
+              onChange: function(e) { setNameVal(e.target.value); },
+              onBlur: saveName,
+              onKeyDown: function(e) { if (e.key === 'Enter') saveName(); },
+              autoFocus: true,
+              style: { flex: 1, marginRight: 8, background: '#0f172a', color: '#f1f5f9', border: '1px solid #334155', borderRadius: 8, padding: '4px 10px', fontSize: 15, fontWeight: 600 }
+            })
+          : React.createElement('h2', {
+              onClick: function() { setEditing(true); },
+              title: 'Click to rename',
+              style: { fontSize: 16, fontWeight: 600, cursor: 'pointer', color: '#f1f5f9' }
+            }, c.name + ' ✏️'),
+        React.createElement('div', { style: { display: 'flex', gap: 6 } },
+          React.createElement('button', {
+            onClick: function() { setShowSettings(function(s) { return !s; }); },
+            style: { background: '#334155', border: 'none', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 13, color: '#94a3b8' }
+          }, '⚙'),
+          React.createElement('button', {
+            onClick: onRemove,
+            style: { background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: 18 }
+          }, '✕')
+        )
+      ),
+
+      // Settings panel
+      showSettings && React.createElement('div', {
+        style: { background: '#0f172a', borderRadius: 12, padding: 14, marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }
+      },
+        React.createElement('label', { style: { fontSize: 12, color: '#94a3b8' } }, 'Step',
+          React.createElement('input', {
+            type: 'number', min: 1,
+            value: c.step,
+            onChange: function(e) { onChange(Object.assign({}, c, { step: Math.max(1, parseInt(e.target.value) || 1) })); },
+            style: { display: 'block', width: '100%', marginTop: 4, background: '#1e293b', color: '#f1f5f9', border: '1px solid #334155', borderRadius: 6, padding: '6px', fontSize: 14 }
+          })
+        ),
+        React.createElement('label', { style: { fontSize: 12, color: '#94a3b8' } }, 'Target (0 = none)',
+          React.createElement('input', {
+            type: 'number', min: 0,
+            value: c.target,
+            onChange: function(e) { onChange(Object.assign({}, c, { target: Math.max(0, parseInt(e.target.value) || 0) })); },
+            style: { display: 'block', width: '100%', marginTop: 4, background: '#1e293b', color: '#f1f5f9', border: '1px solid #334155', borderRadius: 6, padding: '6px', fontSize: 14 }
+          })
+        ),
+        React.createElement('div', { style: { gridColumn: '1/-1' } },
+          React.createElement('div', { style: { fontSize: 12, color: '#94a3b8', marginBottom: 6 } }, 'Colour'),
+          React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+            COLORS.map(function(col) {
+              return React.createElement('div', {
+                key: col,
+                onClick: function() { onChange(Object.assign({}, c, { color: col })); },
+                style: { width: 22, height: 22, borderRadius: '50%', background: col, cursor: 'pointer', border: c.color === col ? '3px solid #fff' : '3px solid transparent' }
+              });
+            })
+          )
+        )
+      ),
+
+      // Count display
+      React.createElement('div', {
+        onClick: increment,
+        style: {
+          fontFamily: 'monospace',
+          fontSize: 88,
+          fontWeight: 800,
+          textAlign: 'center',
+          color: reached ? '#22c55e' : c.color,
+          lineHeight: 1,
+          marginBottom: 14,
+          cursor: 'pointer',
+          userSelect: 'none',
+          padding: '8px 0',
+          transform: bumping ? 'scale(1.1)' : 'scale(1)',
+          transition: 'transform 0.1s ease-out'
         }
-        <div style={{display:'flex',gap:6}}>
-          <button onClick={()=>setShowSettings(s=>!s)} style={{background:'#334155',border:'none',borderRadius:8,padding:'5px 10px',cursor:'pointer',fontSize:13,color:'#94a3b8'}}>⚙</button>
-          <button onClick={onRemove} style={{background:'none',border:'none',cursor:'pointer',color:'#475569',fontSize:18}}>✕</button>
-        </div>
-      </div>
+      }, c.count.toLocaleString()),
 
-      {showSettings && (
-        <div style={{background:'#0f172a',borderRadius:12,padding:14,marginBottom:16,display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          <label style={{fontSize:12,color:'#94a3b8'}}>Step
-            <input type="number" value={c.step} onChange={e=>onChange({...c,step:parseInt(e.target.value)||1})} style={{display:'block',width:'100%',marginTop:4,background:'#1e293b',color:'#f1f5f9',border:'1px solid #334155',borderRadius:6,padding:'6px',fontSize:14}}/>
-          </label>
-          <label style={{fontSize:12,color:'#94a3b8'}}>Target (optional)
-            <input type="number" value={c.target||''} onChange={e=>onChange({...c,target:e.target.value?parseInt(e.target.value):null})} placeholder="None" style={{display:'block',width:'100%',marginTop:4,background:'#1e293b',color:'#f1f5f9',border:'1px solid #334155',borderRadius:6,padding:'6px',fontSize:14}}/>
-          </label>
-          <div style={{gridColumn:'1/-1'}}>
-            <div style={{fontSize:12,color:'#94a3b8',marginBottom:6}}>Colour</div>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-              {COLORS.map(col => (
-                <div key={col} onClick={()=>onChange({...c,color:col})} style={{width:22,height:22,borderRadius:'50%',background:col,cursor:'pointer',border:c.color===col?'3px solid #fff':'3px solid transparent'}}/>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      // Progress bar
+      c.target > 0 && React.createElement('div', { style: { marginBottom: 14 } },
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 4 } },
+          React.createElement('span', null, pct + '% of target'),
+          React.createElement('span', null, c.count.toLocaleString() + ' / ' + c.target.toLocaleString())
+        ),
+        React.createElement('div', { style: { background: '#334155', borderRadius: 6, height: 8, overflow: 'hidden' } },
+          React.createElement('div', { style: { width: pct + '%', height: '100%', background: reached ? '#22c55e' : c.color, transition: 'width 0.2s' } })
+        ),
+        reached && React.createElement('div', { style: { textAlign: 'center', color: '#22c55e', fontWeight: 700, fontSize: 14, marginTop: 6 } }, '🎯 Target reached!')
+      ),
 
-      {/* Count display */}
-      <div ref={numRef} onClick={increment}
-        style={{fontFamily:'monospace',fontSize:88,fontWeight:800,textAlign:'center',color:reached?'#22c55e':c.color,lineHeight:1,marginBottom:16,cursor:'pointer',userSelect:'none',padding:'8px 0'}}>
-        {c.count.toLocaleString()}
-      </div>
-
-      {/* Target progress */}
-      {c.target && (
-        <div style={{marginBottom:16}}>
-          <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#64748b',marginBottom:4}}>
-            <span>{pct}% of target</span><span>{c.count.toLocaleString()} / {c.target.toLocaleString()}</span>
-          </div>
-          <div style={{background:'#334155',borderRadius:6,height:8,overflow:'hidden'}}>
-            <div style={{width:`${pct}%`,height:'100%',background:reached?'#22c55e':c.color,transition:'width 0.2s'}}/>
-          </div>
-          {reached && <div style={{textAlign:'center',color:'#22c55e',fontWeight:700,fontSize:14,marginTop:6}}>🎯 Target reached!</div>}
-        </div>
-      )}
-
-      {/* Controls */}
-      <div style={{display:'flex',gap:8}}>
-        <button onClick={increment} style={{flex:3,background:c.color,color:'#0f172a',border:'none',borderRadius:12,padding:'16px',fontSize:20,fontWeight:800,cursor:'pointer'}}>
-          +{c.step > 1 ? c.step : ''}
-        </button>
-        <button onClick={()=>onChange({...c,count:Math.max(0,c.count-c.step)})} style={{flex:1,background:'#334155',color:'#f1f5f9',border:'none',borderRadius:12,padding:'16px',fontSize:20,fontWeight:700,cursor:'pointer'}}>−</button>
-        <button onClick={()=>onChange({...c,count:0})} style={{flex:1,background:'#1e293b',color:'#64748b',border:'1px solid #334155',borderRadius:12,padding:'16px',fontSize:14,fontWeight:600,cursor:'pointer'}}>↺</button>
-      </div>
-    </div>
+      // Buttons
+      React.createElement('div', { style: { display: 'flex', gap: 8 } },
+        React.createElement('button', {
+          onClick: increment,
+          style: { flex: 3, background: c.color, color: '#0f172a', border: 'none', borderRadius: 12, padding: '16px', fontSize: 20, fontWeight: 800, cursor: 'pointer' }
+        }, '+' + (c.step > 1 ? c.step : '')),
+        React.createElement('button', {
+          onClick: decrement,
+          style: { flex: 1, background: '#334155', color: '#f1f5f9', border: 'none', borderRadius: 12, padding: '16px', fontSize: 20, fontWeight: 700, cursor: 'pointer' }
+        }, '−'),
+        React.createElement('button', {
+          onClick: resetCount,
+          style: { flex: 1, background: '#1e293b', color: '#64748b', border: '1px solid #334155', borderRadius: 12, padding: '16px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+        }, '↺')
+      )
+    )
   );
 }
 
-export default function TallyCounter() {
-  const [counters, setCounters] = useState([makeCounter('Counter 1', COLORS[0])]);
+function TallyCounter() {
+  var countersState = useState([makeCounter('Counter 1', COLORS[0])]);
+  var counters = countersState[0];
+  var setCounters = countersState[1];
 
-  const add = () => {
-    const idx = counters.length % COLORS.length;
-    setCounters(prev => [...prev, makeCounter(`Counter ${prev.length+1}`, COLORS[idx])]);
-  };
+  function addCounter() {
+    var idx = counters.length % COLORS.length;
+    setCounters(function(prev) {
+      return prev.concat([makeCounter('Counter ' + (prev.length + 1), COLORS[idx])]);
+    });
+  }
 
-  const update = (id, updated) => setCounters(prev => prev.map(c => c.id === id ? updated : c));
-  const remove = (id) => setCounters(prev => prev.filter(c => c.id !== id));
-  const resetAll = () => setCounters(prev => prev.map(c => ({...c, count: 0})));
+  function updateCounter(id, updated) {
+    setCounters(function(prev) {
+      return prev.map(function(c) { return c.id === id ? updated : c; });
+    });
+  }
 
-  const total = counters.reduce((a,c) => a+c.count, 0);
+  function removeCounter(id) {
+    setCounters(function(prev) { return prev.filter(function(c) { return c.id !== id; }); });
+  }
+
+  function resetAll() {
+    setCounters(function(prev) { return prev.map(function(c) { return Object.assign({}, c, { count: 0 }); }); });
+  }
+
+  var total = counters.reduce(function(a, c) { return a + c.count; }, 0);
 
   return (
-    <div style={{maxWidth:680,margin:'40px auto',padding:'0 20px'}}>
-      <h1 style={{textAlign:'center',fontSize:28,fontWeight:700,marginBottom:8}}>Tally Counter</h1>
-      <p style={{textAlign:'center',color:'#94a3b8',marginBottom:24}}>Click the number or + button to count. Add multiple counters, set targets and steps.</p>
+    React.createElement('div', { style: { maxWidth: 680, margin: '40px auto', padding: '0 20px' } },
+      React.createElement('h1', { style: { textAlign: 'center', fontSize: 28, fontWeight: 700, marginBottom: 8 } }, 'Tally Counter'),
+      React.createElement('p', { style: { textAlign: 'center', color: '#94a3b8', marginBottom: 24 } }, 'Click the number or + to count · Multiple counters · Set targets · Custom step sizes'),
 
-      {counters.length > 1 && (
-        <div style={{background:'#1e293b',borderRadius:14,padding:'14px 20px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center',border:'1px solid #334155'}}>
-          <span style={{color:'#94a3b8',fontSize:14}}>Total across all counters</span>
-          <span style={{fontFamily:'monospace',fontSize:28,fontWeight:800,color:'#38bdf8'}}>{total.toLocaleString()}</span>
-        </div>
-      )}
+      counters.length > 1 && React.createElement('div', {
+        style: { background: '#1e293b', borderRadius: 14, padding: '14px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #334155' }
+      },
+        React.createElement('span', { style: { color: '#94a3b8', fontSize: 14 } }, 'Total across all counters'),
+        React.createElement('span', { style: { fontFamily: 'monospace', fontSize: 28, fontWeight: 800, color: '#38bdf8' } }, total.toLocaleString())
+      ),
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16,marginBottom:16}}>
-        {counters.map(c => (
-          <Counter key={c.id} c={c} onChange={updated => update(c.id, updated)} onRemove={() => remove(c.id)}/>
-        ))}
-      </div>
+      React.createElement('div', {
+        style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 16 }
+      },
+        counters.map(function(c) {
+          return React.createElement(Counter, {
+            key: c.id,
+            c: c,
+            onChange: function(updated) { updateCounter(c.id, updated); },
+            onRemove: function() { removeCounter(c.id); }
+          });
+        })
+      ),
 
-      <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-        <button onClick={add} style={{background:'#38bdf8',color:'#0f172a',border:'none',borderRadius:12,padding:'12px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}>+ Add Counter</button>
-        {counters.length > 0 && (
-          <button onClick={resetAll} style={{background:'#1e293b',color:'#94a3b8',border:'1px solid #334155',borderRadius:12,padding:'12px 28px',fontSize:15,fontWeight:600,cursor:'pointer'}}>Reset All</button>
-        )}
-      </div>
+      React.createElement('div', { style: { display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' } },
+        React.createElement('button', {
+          onClick: addCounter,
+          style: { background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 12, padding: '12px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }
+        }, '+ Add Counter'),
+        counters.length > 0 && React.createElement('button', {
+          onClick: resetAll,
+          style: { background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', borderRadius: 12, padding: '12px 28px', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
+        }, 'Reset All')
+      ),
 
-      <div style={{background:'#1e293b',borderRadius:14,padding:16,marginTop:24,border:'1px solid #334155'}}>
-        <h2 style={{fontSize:14,fontWeight:600,marginBottom:8}}>Tips</h2>
-        <ul style={{fontSize:13,color:'#64748b',lineHeight:1.8,listStyle:'disc',paddingLeft:20}}>
-          <li>Click the large number directly to count up</li>
-          <li>Press ⚙ to set a step size (e.g. count by 5s) or a target</li>
-          <li>Click the counter name (✏️) to rename it</li>
-          <li>Add multiple counters to track different things at once</li>
-        </ul>
-      </div>
-    </div>
+      React.createElement('div', { style: { background: '#1e293b', borderRadius: 14, padding: 16, marginTop: 24, border: '1px solid #334155' } },
+        React.createElement('h2', { style: { fontSize: 14, fontWeight: 600, marginBottom: 8 } }, 'Tips'),
+        React.createElement('ul', { style: { fontSize: 13, color: '#64748b', lineHeight: 1.8, listStyle: 'disc', paddingLeft: 20 } },
+          React.createElement('li', null, 'Click the large number or the + button to count up'),
+          React.createElement('li', null, 'Press ⚙ to set a step size (e.g. count by 5s) or a target'),
+          React.createElement('li', null, 'Click the counter name (✏️) to rename it'),
+          React.createElement('li', null, 'Add multiple counters to track different items at once')
+        )
+      )
+    )
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<TallyCounter />);
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(TallyCounter));
 //]]>
 </script>
 </body>
